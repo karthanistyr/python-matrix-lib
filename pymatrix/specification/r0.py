@@ -2,18 +2,17 @@ import pymatrix.constants
 import pymatrix.error
 import pymatrix.localisation
 import pymatrix.serialisation
+import pymatrix.specification.base
 import inspect
 
-class RequestMessageBase:
-    def __init__(self, type, transport_options=None):
-        self._type = type
-        self._transport_options = transport_options
+endpoints = {
+    pymatrix.constants.EndpointNamesEnum.Versions:
+        "/_matrix/client/versions",
+    pymatrix.constants.EndpointNamesEnum.Login:
+        "/_matrix/client/r0/login"
+    }
 
-    @pymatrix.serialisation.serialisable
-    def type(self):
-        return self._type
-
-class LoginRequestMessage(RequestMessageBase):
+class LoginRequestMessage(pymatrix.specification.base.RequestMessageBase):
     def __init__(
         self,
         user=None,
@@ -60,7 +59,17 @@ class LoginRequestMessage(RequestMessageBase):
         self._device_id = device_id
         self._initial_device_display_name = initial_device_display_name
 
-        super().__init__(type)
+        super().__init__(type, pymatrix.specification.base.TransportOptions(
+            {
+                "http":
+                {
+                    "endpoint":
+                        endpoints[pymatrix.constants.EndpointNamesEnum.Login],
+                    "method":
+                        "POST"
+                    }
+                }
+        ))
 
     @pymatrix.serialisation.serialisable
     def user(self):
@@ -84,25 +93,9 @@ class LoginRequestMessage(RequestMessageBase):
     def initial_device_display_name(self):
         return self._initial_device_display_name
 
-class Specification:
 
-    endpoints = {
-        pymatrix.constants.EndpointNamesEnum.Versions:
-            "/_matrix/client/versions",
-        pymatrix.constants.EndpointNamesEnum.Login:
-            "/_matrix/client/r0/login"
-        }
+class Specification(pymatrix.specification.base.SpecificationBase):
 
     message_code_type = {
         "login": LoginRequestMessage
     }
-
-    def construct(self, message_code, **kwargs):
-        impl_type = self.message_code_type.get(message_code, None)
-        if(impl_type is None):
-            raise pymatrix.error.SpecificationError(
-                pymatrix.localisation.Localisation.get_message(
-                    pymatrix.constants.ErrorStringEnum.NoSuchMessageKnown
-                )
-            )
-        return impl_type(**kwargs)

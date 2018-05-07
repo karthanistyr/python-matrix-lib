@@ -86,39 +86,3 @@ class HttpBackend(pymatrix.backend.backend.BackendBase):
         Reads from the backend to receive new events
         """
         pass
-
-class HttpTransportOptions:
-    def __init__(self, verb):
-        self.verb = verb
-
-def _set_method(method, func):
-    def wrapper(*args, **kwargs):
-        message = func(*args, **kwargs)
-        message.method = method
-        message.headers = {"Content-Type": "application/json", "Accept": "*/*"}
-        return message
-    return wrapper
-
-def delete(func):
-    """
-    This will set the message as a DELETE message
-    """
-    return _set_method(_METHOD_DELETE, func)
-
-def get(func):
-    """
-    This will set the message as a GET message
-    """
-    return _set_method(_METHOD_GET, func)
-
-def post(func):
-    """
-    This will set the message as a POST message
-    """
-    return _set_method(_METHOD_POST, func)
-
-def put(func):
-    """
-    This will set the message as a PUT message
-    """
-    return _set_method(_METHOD_PUT, func)

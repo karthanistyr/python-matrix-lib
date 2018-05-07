@@ -1,45 +1,36 @@
-import pymatrix.constants as consts
-import pymatrix.error as err
-import pymatrix.localisation as loc
-import pymatrix.specification.r0 as r0
+import pymatrix.serialisation
 
+class TransportOptions:
+    options = {}
 
-class _SpecificationVersionBroker:
-    def get_spec(self, spec_level: consts.SpecLevelEnum):
-        return {
-            consts.SpecLevelEnum.r0: r0.Specification()
-        }.get(spec_level, None)
-        
-class MessageBroker:
+    def __init__(self, options=None):
+        if(options is not None):
+            self.options = options
 
-    _versioned_spec = None
+class RequestMessageBase:
+    def __init__(self, type, transport_options=None):
+        self._type = type
+        self._transport_options = transport_options
 
-    def __init__(
-        self,
-        spec_level: consts.SpecLevelEnum,
-        spec_broker=_SpecificationVersionBroker()
-        ):
-        self._spec_level = spec_level
-        self._broker = spec_broker
-        self._versioned_spec = self._broker.get_spec(self._spec_level)
+    @pymatrix.serialisation.serialisable
+    def type(self):
+        return self._type
 
-    def min_spec_level(spec_level: consts.SpecLevelEnum):
-        def wrapper(func):
-            def run_func(self, *args, **kwargs):
-                if(self._spec_level.value >= spec_level.value):
-                    return func(self, *args, **kwargs)
-                else:
-                    raise err.SpecificationError(
-                        loc.Localisation.get_message(
-                            consts.ErrorStringEnum.NotInSpecification
-                        )
-                    )
-            return run_func
-        return wrapper
+    @property
+    def transport_options(self):
+        return self._transport_options
 
-    @min_spec_level(consts.SpecLevelEnum.r0)
+class SpecificationBase:
+
     def get_message(self, message_code, **kwargs):
-        return self._versioned_spec.construct(message_code, **kwargs)
+        return self.construct(message_code, **kwargs)
 
-    def get_endpoint(self, endpoint_code):
-        return self._versioned_spec.endpoints[endpoint_code]
+    def construct(self, message_code, **kwargs):
+        impl_type = self.message_code_type.get(message_code, None)
+        if(impl_type is None):
+            raise pymatrix.error.SpecificationError(
+                pymatrix.localisation.Localisation.get_message(
+                    pymatrix.constants.ErrorStringEnum.NoSuchMessageKnown
+                )
+            )
+        return impl_type(**kwargs)

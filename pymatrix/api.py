@@ -1,8 +1,8 @@
 import pymatrix.backend
 import pymatrix.backend.http
 import pymatrix.serialisation
-import pymatrix.specification.interface
 import pymatrix.constants as consts
+import pymatrix.specification.base
 from abc import ABCMeta, abstractmethod
 
 class ApiBase(metaclass=ABCMeta):
@@ -26,13 +26,10 @@ class ApiBase(metaclass=ABCMeta):
 
         login_response = await self._backend.write_event(
             self.format_message(
-                self._specification.get_endpoint(consts.EndpointNamesEnum.Login),
-                self._serialiser.serialise(
-                    self._specification.get_message(
-                        "login",
-                        user=username,
-                        password=password
-                        )
+                self._specification.get_message(
+                    "login",
+                    user=username,
+                    password=password
                     )
                 )
             )
@@ -53,14 +50,14 @@ class RestApi(ApiBase):
         super().__init__(
             pymatrix.backend.http.HttpBackend(),
             pymatrix.serialisation.JsonSerialiser(),
-            pymatrix.specification.interface.MessageBroker(
-                pymatrix.constants.SpecLevelEnum.r0
-                )
+            pymatrix.specification.r0.Specification()
             )
 
-    def format_message(self, url, body):
+    def format_message(self, message):
+        url = message.transport_options.options["http"]["endpoint"]
+        method = message.transport_options.options["http"]["method"]
         return pymatrix.backend.http.RestMessage(
             url=url,
-            body=body,
-            method="POST"
+            body=self._serialiser.serialise(message),
+            method=method
             )
