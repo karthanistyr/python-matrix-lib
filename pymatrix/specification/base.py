@@ -1,12 +1,5 @@
 import pymatrix.serialisation
 
-class TransportOptions:
-    options = {}
-
-    def __init__(self, options=None):
-        if(options is not None):
-            self.options = options
-
 class RequestMessageBase:
     def __init__(self, type, transport_options=None):
         self._type = type
@@ -22,15 +15,23 @@ class RequestMessageBase:
 
 class SpecificationBase:
 
+    def get_message_types(self, message_code):
+        types_tuple = self.message_code_type.get(message_code, None)
+        if(types_tuple is None):
+            pymatrix.error.SpecificationError(
+                pymatrix.localisation.Localisation.get_message(
+                    pymatrix.constants.ErrorStringEnum.NoSuchMessageKnown
+                )
+            )
+        return types_tuple
+        
     def get_message(self, message_code, **kwargs):
-        return self.construct(message_code, **kwargs)
-
-    def construct(self, message_code, **kwargs):
-        impl_type = self.message_code_type.get(message_code, None)
-        if(impl_type is None):
+        impl_req_type, impl_resp_type = \
+            self.message_code_type.get(message_code, None)
+        if(impl_req_type is None):
             raise pymatrix.error.SpecificationError(
                 pymatrix.localisation.Localisation.get_message(
                     pymatrix.constants.ErrorStringEnum.NoSuchMessageKnown
                 )
             )
-        return impl_type(**kwargs)
+        return impl_req_type(**kwargs)

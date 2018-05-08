@@ -13,7 +13,7 @@ class SpecLevelEnum(Enum):
     r0 = SpecLevelIndexBase + 1
     r1 = SpecLevelIndexBase + 2
 
-class MessageType:
+class MatrixMessageType:
     m_login_password = "m.login.password"
     m_login_token = "m.login.token"
 

@@ -15,25 +15,24 @@ class ApiBase(metaclass=ABCMeta):
         self._serialiser = serialiser
         self._specification = specification
 
-    async def login(
-        self,
-        hostname,
-        username,
-        password,
-        port=None
-        ):
-        self._backend.connect(hostname, port)
+    async def generic_call(self, call_endpoint_code, *args, **kwargs):
+        request_type, response_type = \
+            self._specification.get_message_types(
+                call_endpoint_code
+                )
+        request = request_type(*args, **kwargs)
 
         login_response = await self._backend.write_event(
-            self.format_message(
-                self._specification.get_message(
-                    "login",
-                    user=username,
-                    password=password
-                    )
-                )
+            self.format_message(request)
             )
-        return login_response
+        return self._serialiser.deserialise(await login_response.json(),
+            response_type)
+
+    async def login(self, hostname, username, password, port=None):
+        self._backend.connect(hostname, port)
+        return await self.generic_call(
+            pymatrix.constants.EndpointNamesEnum.Login,
+            user=username, password=password)
 
     async def logout(self):
         await self._backend.disconnect()
@@ -54,8 +53,8 @@ class RestApi(ApiBase):
             )
 
     def format_message(self, message):
-        url = message.transport_options.options["http"]["endpoint"]
-        method = message.transport_options.options["http"]["method"]
+        url = message.transport_options["http"]["endpoint"]
+        method = message.transport_options["http"]["method"]
         return pymatrix.backend.http.RestMessage(
             url=url,
             body=self._serialiser.serialise(message),
