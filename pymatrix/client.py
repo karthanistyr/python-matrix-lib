@@ -9,8 +9,11 @@ class Client:
     def __init__(self, api):
         self._api = api
 
-    async def login(self, hostname, username, password, port=None):
-        return await self._api.login(hostname, username, password, port)
+    async def connect(self, hostname, port=None):
+        return await self._api.connect(hostname, port)
+
+    async def login(self, username, password):
+        return await self._api.login(username, password)
 
     async def logout(self):
         await self._api.logout()

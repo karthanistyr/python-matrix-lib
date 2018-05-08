@@ -15,6 +15,9 @@ class ApiBase(metaclass=ABCMeta):
         self._serialiser = serialiser
         self._specification = specification
 
+    async def connect(self, hostname, port=None):
+        await self._backend.connect(hostname, port)
+
     async def generic_call(self, call_endpoint_code, *args, **kwargs):
         request_type, response_type = \
             self._specification.get_message_types(
@@ -28,8 +31,7 @@ class ApiBase(metaclass=ABCMeta):
         return self._serialiser.deserialise(await login_response.json(),
             response_type)
 
-    async def login(self, hostname, username, password, port=None):
-        self._backend.connect(hostname, port)
+    async def login(self, username, password):
         return await self.generic_call(
             pymatrix.constants.EndpointNamesEnum.Login,
             user=username, password=password)

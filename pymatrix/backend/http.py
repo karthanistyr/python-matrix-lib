@@ -38,7 +38,7 @@ class HttpBackend(pymatrix.backend.backend.BackendBase):
     def __init__(self):
         self._session = None
 
-    def connect(
+    async def connect(
         self,
         hostname,
         port=pymatrix.backend.backend.DEFAULT_MARIX_PORT):
@@ -46,8 +46,7 @@ class HttpBackend(pymatrix.backend.backend.BackendBase):
         Creates a HTTPS session ready to accept messages
         """
         if(self._session is not None):
-            loop = asyncio.get_event_loop()
-            loop.run_until_complete(self.disconnect())
+            await self.disconnect()
             self.hostname = None
             self._port = None
 

@@ -9,7 +9,7 @@ class BackendBase(metaclass=ABCMeta):
     """
 
     @abstractmethod
-    def connect(
+    async def connect(
         self,
         hostname,
         port
