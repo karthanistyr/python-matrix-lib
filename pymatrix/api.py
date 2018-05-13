@@ -19,7 +19,7 @@ class ApiBase(metaclass=ABCMeta):
         await self._backend.connect(hostname, port)
 
     async def generic_call(self, call_endpoint_code, *args, **kwargs):
-        request_type, response_type = \
+        request_type, response_type, error_type = \
             self._specification.get_message_types(
                 call_endpoint_code
                 )
@@ -28,8 +28,8 @@ class ApiBase(metaclass=ABCMeta):
         login_response = await self._backend.write_event(
             self.format_message(request)
             )
-        return self._serialiser.deserialise(await login_response.json(),
-            response_type)
+        return self._serialiser.deserialise(login_response.body,
+            response_type if not login_response.is_error else error_type)
 
     async def login(self, username, password):
         return await self.generic_call(

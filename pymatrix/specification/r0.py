@@ -114,5 +114,5 @@ class Specification(pymatrix.specification.base.SpecificationBase):
 
     message_code_type = {
         pymatrix.constants.EndpointNamesEnum.Login:
-            (LoginRequestMessage, LoginResponseMessage)
+            (LoginRequestMessage, LoginResponseMessage, pymatrix.specification.base.ErrorMessageBase)
     }

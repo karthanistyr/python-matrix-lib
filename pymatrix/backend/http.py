@@ -26,6 +26,16 @@ class RestMessage:
         self.body = body
         self.headers = headers
 
+class Response:
+    def __init__(self, body, is_error):
+        self._body = body
+        self._is_error = is_error
+
+    @property
+    def body(self): return self._body
+    @property
+    def is_error(self): return self._is_error
+
 class HttpBackend(pymatrix.backend.backend.BackendBase):
     """
     A HTTP backend
@@ -78,7 +88,9 @@ class HttpBackend(pymatrix.backend.backend.BackendBase):
             json=message.body,
             headers=message.headers
             )
-        return response
+
+        return_response = Response(await response.json(), True if response.status >= 400 else False)
+        return return_response
 
     async def read_events(self):
         """
