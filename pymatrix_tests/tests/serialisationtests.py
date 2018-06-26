@@ -163,6 +163,9 @@ class SerialisablePropertyTests(TestClassBase):
 
 class JsonSerialiserTests(TestClassBase):
 
+    def test_method_init(self):
+        self._serialiser = pymatrix.serialisation.JsonSerialiser()
+
     @testmethod
     def T_serialise_nothing_to_serialise_return_None(self):
         # arrange
@@ -173,7 +176,7 @@ class JsonSerialiserTests(TestClassBase):
             def method_member(self): pass
 
         # act
-        serialised = pymatrix.serialisation.JsonSerialiser().serialise(CustomType())
+        serialised = self._serialiser.serialise(CustomType())
 
         # assert
         assert serialised is None
@@ -190,7 +193,7 @@ class JsonSerialiserTests(TestClassBase):
 
 
         # act
-        serialised = pymatrix.serialisation.JsonSerialiser().serialise(CustomType())
+        serialised = self._serialiser.serialise(CustomType())
 
         # assert
         assert serialised == expected_json
@@ -209,7 +212,7 @@ class JsonSerialiserTests(TestClassBase):
 
 
         # act
-        serialised = pymatrix.serialisation.JsonSerialiser().serialise(CustomType())
+        serialised = self._serialiser.serialise(CustomType())
 
         # assert
         assert serialised == expected_json
@@ -226,7 +229,7 @@ class JsonSerialiserTests(TestClassBase):
 
 
         # act
-        serialised = pymatrix.serialisation.JsonSerialiser().serialise(CustomType())
+        serialised = self._serialiser.serialise(CustomType())
 
         # assert
         assert serialised == expected_json
@@ -249,7 +252,7 @@ class JsonSerialiserTests(TestClassBase):
             "other_field": {"sub_int_member": 456}}
 
         # act
-        serialised = pymatrix.serialisation.JsonSerialiser().serialise(CustomType())
+        serialised = self._serialiser.serialise(CustomType())
 
         # assert
         assert serialised == expected_json
@@ -275,7 +278,7 @@ class JsonSerialiserTests(TestClassBase):
         expected_json = {"int_field": 1, "string_field": "one"}
 
         # act
-        serialised = pymatrix.serialisation.JsonSerialiser().serialise(CustomType())
+        serialised = self._serialiser.serialise(CustomType())
 
         # assert
         assert serialised == expected_json
@@ -301,7 +304,7 @@ class JsonSerialiserTests(TestClassBase):
         expected_json = {"int_field": 1, "string_field": "one"}
 
         # act
-        serialised = pymatrix.serialisation.JsonSerialiser().serialise(CustomType())
+        serialised = self._serialiser.serialise(CustomType())
 
         # assert
         assert serialised == expected_json
@@ -324,7 +327,7 @@ class JsonSerialiserTests(TestClassBase):
             "other_field": [{"sub_int_member": 456},{"sub_int_member": 456}]}
 
         # act
-        serialised = pymatrix.serialisation.JsonSerialiser().serialise(CustomType())
+        serialised = self._serialiser.serialise(CustomType())
 
         # assert
         assert serialised == expected_json
@@ -332,9 +335,14 @@ class JsonSerialiserTests(TestClassBase):
     @testmethod
     def T_serialise_very_complex_object_return_expected_json(self):
         # arrange
+        class CustomEndType:
+            @pymatrix.serialisation.serialisable
+            def this_member(self): return 0
         class CustomSubSubType:
             @pymatrix.serialisation.serialisable
             def leaf_member(self): return {"key1": "k1"}
+            @pymatrix.serialisation.serialisable
+            def other_leaf_member(self): return {"key2": CustomEndType()}
         class CustomSubType:
             @pymatrix.serialisation.serialisable
             def sub_int_member(self): return 456
@@ -350,18 +358,23 @@ class JsonSerialiserTests(TestClassBase):
             @pymatrix.serialisation.serialisable
             def other_field(self): return [CustomSubType(), CustomSubType()]
 
-        expected_json = {"int_field": 1, "string_field": "one",
+        expected_json = {"int_field": 1,
             "other_field": [
-                {"sub_int_member": 456,
+                {"another_complex_member": {
+                        "leaf_member": {"key1": "k1"},
+                        "other_leaf_member": {"key2": {"this_member": 0}}},
                     "collection_strings": ["string 1", "string 2"],
-                    "another_complex_member": {"leaf_member": {"key1", "k1"}}},
-                {"sub_int_member": 456,
+                    "sub_int_member": 456},
+                {"another_complex_member": {
+                        "leaf_member": {"key1": "k1"},
+                        "other_leaf_member": {"key2": {"this_member": 0}}},
                     "collection_strings": ["string 1", "string 2"],
-                    "another_complex_member": {"leaf_member": {"key1", "k1"}}}
-            ]}
+                    "sub_int_member": 456}
+            ],
+            "string_field": "one"}
 
         # act
-        serialised = pymatrix.serialisation.JsonSerialiser().serialise(CustomType())
+        serialised = self._serialiser.serialise(CustomType())
 
         # assert
         assert serialised == expected_json
