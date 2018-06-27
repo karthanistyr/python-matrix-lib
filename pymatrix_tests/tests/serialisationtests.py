@@ -1,5 +1,7 @@
 from pymatrix_tests.framework.fixture import TestClassBase, testmethod
+from pymatrix_tests.framework.asserts import Assert
 import pymatrix.serialisation
+import pymatrix.error
 import inspect
 
 def get_member_by_name(obj, name):
@@ -78,6 +80,8 @@ class SerialisationTests(TestClassBase):
         class CustomType:
             @pymatrix.serialisation.serialisable(CustomSubType)
             def int_member(self): return 123
+            @int_member.setter
+            def int_member(self, value): self._int_member = value
 
         # assert
         member = get_member_by_name(CustomType, "int_member")
@@ -378,3 +382,252 @@ class JsonSerialiserTests(TestClassBase):
 
         # assert
         assert serialised == expected_json
+
+    @testmethod
+    def T_deserialise_flat_json_into_flat_object(self):
+        # arrange
+        flat_json = {"member_one": 1, "member_two": "two"}
+        class FlatType:
+            @pymatrix.serialisation.serialisable
+            def member_one(self): return self._member_one
+            @member_one.setter
+            def member_one(self, value): self._member_one = value
+            @pymatrix.serialisation.serialisable
+            def member_two(self): return self._member_two
+            @member_two.setter
+            def member_two(self, value): self._member_two = value
+
+        # act
+        obj = self._serialiser.deserialise(flat_json, FlatType)
+
+        # assert
+        assert isinstance(obj, FlatType)
+        assert obj.member_one == 1
+        assert obj.member_two == "two"
+
+    @testmethod
+    @Assert.expectexceptiontype(pymatrix.error.SerialisationError)
+    def T_deserialise_flat_json_target_type_missing_member_throw(self):
+        # arrange
+        flat_json = {"member_one": 1, "member_two": "two"}
+        class FlatType:
+            @pymatrix.serialisation.serialisable
+            def member_one(self): return self._member_one
+            @member_one.setter
+            def member_one(self, value): self._member_one = value
+
+        # act
+        obj = self._serialiser.deserialise(flat_json, FlatType)
+
+    @testmethod
+    @Assert.expectexceptiontype(pymatrix.error.SerialisationError)
+    def T_deserialise_flat_json_target_type_non_serable_member_throw(self):
+        # arrange
+        flat_json = {"member_one": 1, "member_two": "two"}
+        class FlatType:
+            @pymatrix.serialisation.serialisable
+            def member_one(self): return self._member_one
+            @member_one.setter
+            def member_one(self, value): self._member_one = value
+            @property
+            def member_two(self): return self._member_two
+            @member_two.setter
+            def member_two(self, value): self._member_two = value
+
+        # act
+        obj = self._serialiser.deserialise(flat_json, FlatType)
+
+    @testmethod
+    @Assert.expectexceptiontype(pymatrix.error.SerialisationError)
+    def T_deserialise_flat_json_target_type_readonly_member_throw(self):
+        # arrange
+        flat_json = {"member_one": 1, "member_two": "two"}
+        class FlatType:
+            @pymatrix.serialisation.serialisable
+            def member_one(self): return self._member_one
+            @member_one.setter
+            def member_one(self, value): self._member_one = value
+            @pymatrix.serialisation.serialisable
+            def member_two(self): return self._member_two
+
+        # act
+        obj = self._serialiser.deserialise(flat_json, FlatType)
+
+    @testmethod
+    def T_deserialise_complex_json_return_complex_object(self):
+        # arrange
+        complex_json = {"member_one": 1, "member_two": {"sub_member": "abc"}}
+        class SubType:
+            @pymatrix.serialisation.serialisable
+            def sub_member(self): return self._sub_member
+            @sub_member.setter
+            def sub_member(self, value): self._sub_member = value
+        class ComplexType:
+            @pymatrix.serialisation.serialisable
+            def member_one(self): return self._member_one
+            @member_one.setter
+            def member_one(self, value): self._member_one = value
+            @pymatrix.serialisation.serialisable(SubType)
+            def member_two(self): return self._member_two
+            @member_two.setter
+            def member_two(self, value): self._member_two = value
+
+        # act
+        obj = self._serialiser.deserialise(complex_json, ComplexType)
+
+        # assert
+        assert isinstance(obj, ComplexType)
+        assert obj.member_one == 1
+        assert isinstance(obj.member_two, SubType)
+        assert obj.member_two.sub_member == "abc"
+
+    @testmethod
+    def T_deserialise_json_array_into_list(self):
+        # arrange
+        json_array = { "my_array": [
+            {"int_member": 1},
+            {"int_member": 2},
+            {"int_member": 3},
+            {"int_member": 4}
+        ]}
+        class SubType:
+            @pymatrix.serialisation.serialisable
+            def int_member(self): return self._int_member
+            @int_member.setter
+            def int_member(self, value): self._int_member = value
+        class ObjectType:
+            @pymatrix.serialisation.serialisable(SubType)
+            def my_array(self): return self._my_array
+            @my_array.setter
+            def my_array(self, value): self._my_array = value
+
+        # act
+        obj = self._serialiser.deserialise(json_array, ObjectType)
+
+        # assert
+        assert isinstance(obj, ObjectType)
+        assert isinstance(obj.my_array, list)
+        assert len(obj.my_array) == 4
+
+        first_value = 1
+        for sub in obj.my_array:
+            assert sub.int_member == first_value
+            first_value += 1
+
+    @testmethod
+    def T_deserialise_unspecified_dict_stored_as_is(self):
+        # arrange
+        sub_dict = { "arbitrary": 1, "other": "test"}
+        json_with_dict = {"my_dictionary": sub_dict}
+        class ObjectType:
+            @pymatrix.serialisation.serialisable
+            def my_dictionary(self): return self._my_dictionary
+            @my_dictionary.setter
+            def my_dictionary(self, value): self._my_dictionary = value
+
+        # act
+        obj = self._serialiser.deserialise(json_with_dict, ObjectType)
+
+        # assert
+        assert isinstance(obj, ObjectType)
+        assert obj.my_dictionary == sub_dict
+
+    @testmethod
+    def T_deserialise_json_primitive_returns_primitive(self):
+        # arrange
+        json_primitive = { "my_primitive": 1 }
+        class ObjectType:
+            @pymatrix.serialisation.serialisable
+            def my_primitive(self): return self._my_primitive
+            @my_primitive.setter
+            def my_primitive(self, value): self._my_primitive = value
+
+        # act
+        obj = self._serialiser.deserialise(json_primitive, ObjectType)
+
+        # assert
+        assert isinstance(obj, ObjectType)
+        assert obj.my_primitive == 1
+
+    @testmethod
+    def T_deserialise_very_complex_json_returns_complex_obj_structure(self):
+        # arrange
+        very_complex_json = {"int_field": 1,
+            "other_field": [
+                {"another_complex_member": {
+                        "leaf_member": {"key1": "k1"},
+                        "other_leaf_member": {"this_member": 0}},
+                    "collection_strings": ["string 1", "string 2"],
+                    "sub_int_member": 456},
+                {"another_complex_member": {
+                        "leaf_member": {"key1": "k1"},
+                        "other_leaf_member": {"this_member": 0}},
+                    "collection_strings": ["string 1", "string 2"],
+                    "sub_int_member": 456}
+            ],
+            "string_field": "one"}
+        class CustomEndType:
+            @pymatrix.serialisation.serialisable
+            def this_member(self): return self._this_member
+            @this_member.setter
+            def this_member(self, value): self._this_member = value
+        class CustomSubSubType:
+            @pymatrix.serialisation.serialisable
+            def leaf_member(self): return self._leaf_member
+            @leaf_member.setter
+            def leaf_member(self, value): self._leaf_member = value
+            @pymatrix.serialisation.serialisable(CustomEndType)
+            def other_leaf_member(self):
+                return self._other_leaf_member
+            @other_leaf_member.setter
+            def other_leaf_member(self, value):
+                self._other_leaf_member = value
+        class CustomSubType:
+            @pymatrix.serialisation.serialisable
+            def sub_int_member(self): return self._sub_int_member
+            @sub_int_member.setter
+            def sub_int_member(self, value): self._sub_int_member = value
+            @pymatrix.serialisation.serialisable
+            def collection_strings(self): return self._collection_strings
+            @collection_strings.setter
+            def collection_strings(self, value): self._collection_strings=value
+            @pymatrix.serialisation.serialisable(CustomSubSubType)
+            def another_complex_member(self):
+                return self._another_complex_member
+            @another_complex_member.setter
+            def another_complex_member(self, value):
+                self._another_complex_member = value
+        class CustomType:
+            @pymatrix.serialisation.serialisable
+            def int_field(self): return self._int_field
+            @int_field.setter
+            def int_field(self, value): self._int_field = value
+            @pymatrix.serialisation.serialisable
+            def string_field(self): return self._string_field
+            @string_field.setter
+            def string_field(self, value): self._string_field = value
+            @pymatrix.serialisation.serialisable(CustomSubType)
+            def other_field(self): return self._other_field
+            @other_field.setter
+            def other_field(self, value): self._other_field = value
+
+        # act
+        obj = self._serialiser.deserialise(very_complex_json, CustomType)
+
+        # assert
+        assert isinstance(obj, CustomType)
+        assert obj.int_field == 1
+        assert obj.string_field == "one"
+        assert isinstance(obj.other_field, list)
+        for other_field in obj.other_field:
+            assert other_field.sub_int_member == 456
+            assert isinstance(other_field.collection_strings, list)
+            assert other_field.collection_strings == ["string 1", "string 2"]
+            assert isinstance(other_field.another_complex_member,
+                CustomSubSubType)
+            assert other_field.another_complex_member.leaf_member \
+                == {"key1": "k1"}
+            assert isinstance(other_field.another_complex_member\
+                .other_leaf_member, CustomEndType)
+            assert other_field.another_complex_member.other_leaf_member\
+                .this_member == 0

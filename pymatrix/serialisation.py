@@ -1,15 +1,22 @@
 from abc import ABCMeta, abstractmethod
+import pymatrix.error
 import inspect
 
 class SerialisableProperty(property):
+    underlying_type = None
+
     def __init__(self, fget=None, fset=None, fdel=None, doc=None,
         underlying_type=None):
-        super().__init__(fget, fset, fdel, doc)
         self.__setattr__("__doc__", doc)
-        self._underlying_type = underlying_type
+        self.underlying_type = underlying_type
+        super().__init__(fget, fset, fdel, doc)
 
-    @property
-    def underlying_type(self): return self._underlying_type
+    def setter(self, fset):
+        prop = super().setter(fset)
+        prop.underlying_type = self.underlying_type
+        prop.__setattr__("__doc__", self.__doc__)
+        return prop
+
 
 def serialisable(arg):
     def make_no_type(func):
@@ -27,11 +34,17 @@ def serialisable(arg):
 def is_serialisable(member):
     return isinstance(member, SerialisableProperty)
 
-def get_serialisables(obj):
+def get_serialisable_field_metadata(type):
     serialisable_members =  inspect.getmembers(
-        obj.__class__, predicate=is_serialisable
+        type, predicate=is_serialisable
         )
-    return [(name, member.fget(obj)) for name, member in serialisable_members]
+    return dict(serialisable_members)
+
+def get_serialisables(obj):
+    serialisable_members =  get_serialisable_field_metadata(obj.__class__)
+    return [(name, member.fget(obj)) for name, member
+        in serialisable_members.items()]
+
 
 class SerialiserBase(metaclass=ABCMeta):
     """
@@ -60,9 +73,24 @@ class JsonSerialiser(SerialiserBase):
         return isinstance(obj, (list, set, tuple))
 
     def deserialise(self, json_data, type: type):
+        if(self._is_primitive(json_data) or json_data is None or type is None):
+            return json_data
+        if(self._is_collection(json_data)):
+            return [self.deserialise(item, type) for item in json_data]
+
+        expected_members = get_serialisable_field_metadata(type)
         obj = type()
         for key, val in json_data.items():
-            obj.__setattr__(key, val)
+            if(key in expected_members):
+                try:
+                    obj.__setattr__(key, self.deserialise(val,
+                        expected_members[key].underlying_type))
+                except AttributeError as ae:
+                    raise pymatrix.error.SerialisationError(
+                        "There was an error setting the member 'key'.") from ae
+            else:
+                raise pymatrix.error.SerialisationError(
+                    "There is no serialisable member of name 'key'.")
         return obj
 
     def serialise(self, object):
@@ -75,7 +103,6 @@ class JsonSerialiser(SerialiserBase):
         if(isinstance(object, dict)):
             return dict([(sub_member_name, self.serialise(sub_value))
                     for sub_member_name, sub_value in object.items()])
-
 
         return_object = {}
         serialisable_members = get_serialisables(object)
