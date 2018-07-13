@@ -1,4 +1,5 @@
-import pymatrix.serialisation
+from abc import ABCMeta, abstractmethod
+import pymatrix.localisation
 
 class RequestMessageBase:
     def __init__(self, type, transport_options=None):
@@ -26,25 +27,27 @@ class ErrorMessageBase:
     def error(self, value): self._error = value
 
 
-class SpecificationBase:
+class SpecificationBase(metaclass=ABCMeta):
+
+    message_code_type = {}
+
+    def __init__(self):
+        self._define_message_types()
+
+    @abstractmethod
+    def _define_message_types(self): pass
 
     def get_message_types(self, message_code):
         types_tuple = self.message_code_type.get(message_code, None)
         if(types_tuple is None):
-            pymatrix.error.SpecificationError(
+            raise pymatrix.error.SpecificationError(
                 pymatrix.localisation.Localisation.get_message(
-                    pymatrix.constants.ErrorStringEnum.NoSuchMessageKnown
+                    pymatrix.constants.ErrorStringEnum.NotInSpecification
                 )
             )
         return types_tuple
 
     def get_message(self, message_code, **kwargs):
         impl_req_type, impl_resp_type = \
-            self.message_code_type.get(message_code, None)
-        if(impl_req_type is None):
-            raise pymatrix.error.SpecificationError(
-                pymatrix.localisation.Localisation.get_message(
-                    pymatrix.constants.ErrorStringEnum.NoSuchMessageKnown
-                )
-            )
+            self.get_message_types(message_code)
         return impl_req_type(**kwargs)

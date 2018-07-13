@@ -1,16 +1,6 @@
 import pymatrix.constants
 import pymatrix.error
 import pymatrix.localisation
-import pymatrix.serialisation
-import pymatrix.specification.base
-import inspect
-
-endpoints = {
-    pymatrix.constants.EndpointNamesEnum.Versions:
-        "/_matrix/client/versions",
-    pymatrix.constants.EndpointNamesEnum.Login:
-        "/_matrix/client/r0/login"
-    }
 
 class LoginRequestMessage(pymatrix.specification.base.RequestMessageBase):
     def __init__(self, user=None, address=None, password=None,
@@ -108,11 +98,3 @@ class LoginResponseMessage:
     def device_id(self): return self._device_id
     @device_id.setter
     def device_id(self, value): self._device_id = value
-
-
-class Specification(pymatrix.specification.base.SpecificationBase):
-
-    message_code_type = {
-        pymatrix.constants.EndpointNamesEnum.Login:
-            (LoginRequestMessage, LoginResponseMessage, pymatrix.specification.base.ErrorMessageBase)
-    }

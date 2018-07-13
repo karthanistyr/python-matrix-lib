@@ -6,7 +6,6 @@ class ErrorStringEnum(Enum):
     NoLoginProvided = ErrorCodeBase + 1
     MalformedMessage = ErrorCodeBase + 2
     NotInSpecification = ErrorCodeBase + 3
-    NoSuchMessageKnown = ErrorCodeBase + 4
 
 SpecLevelIndexBase = 0
 class SpecLevelEnum(Enum):
