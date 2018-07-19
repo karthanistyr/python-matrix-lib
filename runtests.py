@@ -3,12 +3,14 @@ from pymatrix_tests.framework.fixture import TestRunner, TestStatusEnum
 from pymatrix_tests.tests.serialisationtests import SerialisationTests, \
     SerialisablePropertyTests, JsonSerialiserTests
 from pymatrix_tests.tests.specification.basetests import SpecificationBaseTests
+from pymatrix_tests.integration_tests.logintests import LoginTests
 
 classes_to_test = [
     SerialisationTests,
     SerialisablePropertyTests,
     JsonSerialiserTests,
-    SpecificationBaseTests
+    SpecificationBaseTests,
+    LoginTests
     ]
 
 runner = TestRunner()

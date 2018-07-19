@@ -47,3 +47,23 @@ class SpecificationBaseTests(TestClassBase):
 
         # assert
         assert types == MessageType1
+
+    @testmethod
+    def T_get_message_instantiate_first_type_in_tuple(self):
+        class MessageType1: pass
+        class ResponseType1: pass
+        class MessageType2: pass
+        class ResponseType2: pass
+        class CustomSpec(pymatrix.specification.base.SpecificationBase):
+            def _define_message_types(self):
+                self.message_code_type = {
+                    "type1": (MessageType1, ResponseType1),
+                    "type2": (MessageType2, ResponseType2)
+                    }
+        message_code = "type1"
+
+        # act
+        req = CustomSpec().get_message(message_code)
+
+        # assert
+        assert isinstance(req, MessageType1)

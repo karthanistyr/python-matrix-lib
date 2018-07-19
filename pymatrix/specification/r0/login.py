@@ -1,6 +1,7 @@
 import pymatrix.constants
 import pymatrix.error
 import pymatrix.localisation
+import pymatrix.specification.r0
 
 class LoginRequestMessage(pymatrix.specification.base.RequestMessageBase):
     def __init__(self, user=None, address=None, password=None,
@@ -48,7 +49,7 @@ class LoginRequestMessage(pymatrix.specification.base.RequestMessageBase):
                 "http":
                 {
                     "endpoint":
-                        endpoints[pymatrix.constants.EndpointNamesEnum.Login],
+                        pymatrix.specification.r0.endpoints[pymatrix.constants.EndpointNamesEnum.Login],
                     "method":
                         "POST"
                     }

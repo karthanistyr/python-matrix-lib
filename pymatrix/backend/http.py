@@ -1,6 +1,6 @@
 import aiohttp
 import asyncio
-import pymatrix.backend.backend
+import pymatrix.backend.base
 
 _METHOD_GET="GET"
 _METHOD_PUT="PUT"
@@ -36,7 +36,7 @@ class Response:
     @property
     def is_error(self): return self._is_error
 
-class HttpBackend(pymatrix.backend.backend.BackendBase):
+class HttpBackend(pymatrix.backend.base.BackendBase):
     """
     A HTTP backend
     """
@@ -51,7 +51,7 @@ class HttpBackend(pymatrix.backend.backend.BackendBase):
     async def connect(
         self,
         hostname,
-        port=pymatrix.backend.backend.DEFAULT_MARIX_PORT):
+        port):
         """
         Creates a HTTPS session ready to accept messages
         """
@@ -60,9 +60,13 @@ class HttpBackend(pymatrix.backend.backend.BackendBase):
             self.hostname = None
             self._port = None
 
+        real_port = port
+        if(real_port is None):
+            real_port = pymatrix.backend.base.DEFAULT_MARIX_PORT
+
         self._session = aiohttp.ClientSession()
         self._hostname = hostname
-        self._port = port
+        self._port = real_port
 
     async def disconnect(self):
         """
@@ -76,12 +80,11 @@ class HttpBackend(pymatrix.backend.backend.BackendBase):
         Writes events to the backend to send to the server
         """
 
-        print(message.__dict__)
         response = await self._session.request(
             # proxy="http://localhost:8080",
             # verify_ssl=False,
             method=message.method,
-            url="https://{hostname}:{port}{url}".format(
+            url="http://{hostname}:{port}{url}".format(
                 hostname=self._hostname,
                 port=self._port,
                 url=message.url),
@@ -89,7 +92,8 @@ class HttpBackend(pymatrix.backend.backend.BackendBase):
             headers=message.headers
             )
 
-        return_response = Response(await response.json(), True if response.status >= 400 else False)
+        return_response = Response(await response.json(),
+            True if response.status >= 400 else False)
         return return_response
 
     async def read_events(self):

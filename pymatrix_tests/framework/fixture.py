@@ -38,6 +38,7 @@ class TestClassBase(metaclass=ABCMeta):
             except Exception as e:
                 if(stop_time is None):
                     stop_time = get_microseconds()
+                self.test_method_cleanup()
                 return UnitTestResult.complete(func_name, TestStatusEnum.Fail,
                     stop_time-start_time, e)
         wrapper.__dict__[is_test_method] = True
